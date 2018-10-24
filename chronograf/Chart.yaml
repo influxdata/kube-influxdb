@@ -1,0 +1,12 @@
+name: chronograf
+version: 1.6.2
+description: Chart for Chronograf
+keywords:
+- chronograf
+- visualizaion
+- timeseries
+home: https://www.influxdata.com/time-series-platform/chronograf/
+maintainers:
+- name:  
+- email: 
+engine: gotpl
