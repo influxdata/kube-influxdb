@@ -37,8 +37,8 @@ affinity: {}
 ## ref: http://kubernetes.io/docs/user-guide/services/
 service:
   enabled: true
-  type: NodePort # Minikube
-  #type: LoadBalancer # Any Public Cloud
+  #type: NodePort # Minikube
+  type: LoadBalancer # Any Public Cloud
 
 
 ## Exposed telegraf configuration

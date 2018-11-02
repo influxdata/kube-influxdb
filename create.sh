@@ -30,7 +30,7 @@ function create_chart
 	if [ $component == "influxdb" ]; then
 
 		helm install --name data --namespace tick influxdb
-		sleep 20
+		sleep 60
 		#influxURL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 		#echo INFLUX_URL="$influxURL" >> ~/.bashrc
 	
@@ -70,18 +70,18 @@ function create_chart
 		
 		helm install --name data --namespace tick influxdb
 		sleep 120
-	
-                INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
+
+        INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 
 		sed "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml
-                helm install --name alerts --namespace tick kapacitor
-                sleep 120
+        helm install --name alerts --namespace tick kapacitor
+        sleep 120
 	
 		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
 		kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-                KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
-                sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
-                sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml
+        KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
+        sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
+        sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml
 
 		helm install --name polling --namespace tick telegraf-s
 		
