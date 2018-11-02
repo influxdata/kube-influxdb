@@ -12,7 +12,9 @@ image:
 ##
 service:
   replicas: 1
-  type: NodePort
+  #type: NodePort #MInikube
+  type: LoadBalancer # Any Public Cloud
+
 
 ## Persist data to a persitent volume
 ##

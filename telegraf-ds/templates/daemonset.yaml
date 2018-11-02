@@ -55,6 +55,9 @@ spec:
           mountPath: /etc/telegraf
     {{- with .Values.tolerations }}
       tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"  
+        effect: "NoSchedule"    
 {{ toYaml . | indent 8 }}
     {{- end }}
       volumes:
@@ -73,3 +76,5 @@ spec:
       - name: config
         configMap:
           name: {{ template "fullname" . }}
+
+      

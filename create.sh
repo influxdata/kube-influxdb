@@ -1,25 +1,16 @@
 #!/bin/bash
-# helm install --name data --namespace tick ./influxdb/
-
-# helm install --name alerts --namespace tick ./kapacitor/
-# helm install --name dash --namespace tick ./chronograf/
-# sleep 15
-# helm install --name polling --namespace tick ./telegraf-s/
-# helm install --name hosts --namespace tick ./telegraf-ds/
-# kubectl get svc -w --namespace tick -l app=dash-chronograf
-
+source ~/.bashrc
 function main
 {
 	initScript "$@"
 	echo "Component:" $COMPONENT
 	echo "Action:" $ACTION
-
-	if [ $ACTION == 'create' ]; then
+	
+	if [ $ACTION == 'create' ]; then	
 		create_chart $COMPONENT
 		
 	elif [ $ACTION == 'destroy' ]; then
 		destroy_chart $COMPONENT
-
 	else
 		echo "Action is not valid !!!"
 	fi	
@@ -28,33 +19,81 @@ function main
 function create_chart
 {
 	component=$1
+	influxURL=""
+	kapacitorURL=""
+	INFLUX_URL=""
+	kAPACITOR_URL=""
+	# Initiaize the helm
+	helm init
 
-	
 	echo "Creating chart for" $component
 	if [ $component == "influxdb" ]; then
-		helm install --name data --namespace tick influxdb
-	elif [ $component == "kapacitor" ]; then
-		helm install --name alerts --namespace tick kapacitor
-	elif [ $component == "chronograf" ]; then
-		helm install --name dash --namespace tick chronograf
-	elif [ $component == "telegraf-s" ]; then
-		helm install --name polling --namespace tick telegraf-s
-	elif [ $component == "telegraf-ds" ]; then
-		helm install --name hosts --namespace tick telegraf-ds	
-	else
-		helm install --name data --namespace tick influxdb
-		sleep 10
-		helm install --name alerts --namespace tick kapacitor
-		sleep 10
-		helm install --name dash --namespace tick chronograf
-		helm install --name polling --namespace tick telegraf-s
-		helm install --name hosts --namespace tick telegraf-ds
-	fi
 
-# 	kubectl describe services data-influxdb > output.txt
-# 	data=`sed -n 's/^NodePort: //p' output.txt`
-# 	data1=`echo $data | cut -b 5-9`
-# 	echo $data1
+		helm install --name data --namespace tick influxdb
+		sleep 20
+		#influxURL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
+		#echo INFLUX_URL="$influxURL" >> ~/.bashrc
+	
+	elif [ $component == "kapacitor" ]; then
+
+	 	sed "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml	
+		helm install --name alerts --namespace tick kapacitor
+		sleep 60
+		kapacitorURL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
+		#echo KAPACITOR_URL="$kapacitorURL" >> ~/.bashrc
+
+	elif [ $component == "chronograf" ]; then
+		
+		helm install --name dash --namespace tick chronograf
+		sleep 120
+		create_dashboard
+	elif [ $component == "telegraf-s" ]; then
+	
+		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+                kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+		INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
+		KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
+		sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
+		sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml
+		echo $INFLUX_URL
+		echo $KAPACITOR_URL
+		helm install --name polling --namespace tick telegraf-s
+
+	elif [ $component == "telegraf-ds" ]; then
+		
+		influxURL=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+		INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
+		sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
+		helm install --name hosts --namespace tick telegraf-ds	
+
+	else
+		
+		helm install --name data --namespace tick influxdb
+		sleep 120
+	
+                INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
+
+		sed "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml
+                helm install --name alerts --namespace tick kapacitor
+                sleep 120
+	
+		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
+		kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
+                KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
+                sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
+                sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml
+
+		helm install --name polling --namespace tick telegraf-s
+		
+		sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
+		helm install --name hosts --namespace tick telegraf-ds
+
+		helm install --name dash --namespace tick chronograf
+		sleep 120	
+		create_dashboard
+	fi	
+	kubectl config set-context $(kubectl config current-context) --namespace=tick
+
 }
 
 function destroy_chart
@@ -74,15 +113,27 @@ function destroy_chart
 	else	
 		helm delete data alerts dash polling hosts --purge
 	fi
-
 }
+
+function create_dashboard
+{
+	#minikube_ip=$(minikube ip)
+	dashboard=`(kubectl describe svc dash-chronograf | grep "Ingress" | awk '{print $3}')`
+	DST=http://$dashboard/chronograf/v1/dashboards
+	cd chronograf/dashboards
+  		for file in *
+  		do
+	 		curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
+	 	done
+}
+
 
 function usage
 {
 	cat <<EOF
 
     Usage:
-        -c component:  The name of the component. Valid options are influxdb, kapacitor, chronograf, telegraf-s, telegraf-ds and all
+        -c component:  The name of the component. Valid options are influxdb, kapacitor, telegraf-s, telegraf-ds, chronograf and all
         -a action: Valid options are create and destroy
     Examples:
         ./create.sh -c influxdb -a create
