@@ -10,8 +10,8 @@ image:
 ## ref: http://kubernetes.io/docs/user-guide/services/
 ##
 service:
-  type: NodePort # Minikube
-  #type: LoadBalancer # Any Public Cloud
+  #type: NodePort # Minikube
+  type: LoadBalancer # Any Public Cloud
 
 
 ## Persist data to a persitent volume
