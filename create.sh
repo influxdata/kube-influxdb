@@ -45,7 +45,7 @@ function create_chart
 	elif [ $component == "chronograf" ]; then
 		
 		helm install --name dash --namespace tick chronograf
-		sleep 120
+		sleep 180
 		create_dashboard
 	elif [ $component == "telegraf-s" ]; then
 	
