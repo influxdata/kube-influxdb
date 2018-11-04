@@ -23,10 +23,12 @@ Run the complete TICK stack using this using create.sh script. By using `create.
     * [link](https://github.com/kubernetes/helm/blob/master/docs/install.md)
   - Run `helm init` to install `tiller` in your cluster
     * [link](https://github.com/kubernetes/helm/blob/master/docs/install.md#installing-tiller)
-- Have a 'daemon-set' configuration on the master node of the cluster for 'telegraf-ds'
+- Have a `daemon-set` configuration on the `master node` of the cluster for `telegraf-ds`
   - Execute following command on master node. 
-       kubectl taint nodes ip-x-x-x-x.ec2.internal node-role.kubernetes.io/master:NoSchedule-
-    Note: You need to ssh to master node to execute above command. 
+  
+       `kubectl taint nodes <ip-x-x-x-x.ec2.internal> node-role.kubernetes.io/master:NoSchedule-`
+       
+    ###### Note: You need to ssh to master node to execute above command. Replace `ip-x-x-x-x` from `<ip-x-x-x-x.ec2.internal>` with cluster's master node private ip.  
 
 ### Usage
 just run `./create.sh` and let the shell script do it for you! You can also tear down the installation with `./destroy.sh`
