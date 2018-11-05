@@ -51,3 +51,10 @@ just run `./create.sh` and let the shell script do it for you! You can also tear
         ./create.sh -c influxdb -a destroy
 	
 ### Manual Steps after complete stack deployement
+- There are two Endpoint printed on console at the end of create script 
+  - `Chronograf Endpoint URL`.
+  - `Influxdb Endpoint URL`.
+
+- Use `Chronograf Endpoint URL` to access `Chronograf dashboard`. 
+- Use `Influxdb Endpint URL` to add new influxdb connection.
+ - Replace connection string with `Influxdb Endpoint URL`.

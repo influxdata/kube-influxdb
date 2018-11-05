@@ -23,6 +23,7 @@ function create_chart
 	kapacitorURL=""
 	INFLUX_URL=""
 	kAPACITOR_URL=""
+	Chronograf_URL=""
 	# Initiaize the helm
 	helm init
 
@@ -50,6 +51,7 @@ function create_chart
 		echo Deploying Chronograf .....
 		sleep 180
 		create_dashboard
+		Chronograf_URL=`(kubectl describe svc dash-chronograf | grep "Ingress" | awk '{print $3}')`
 	elif [ $component == "telegraf-s" ]; then
 	
 		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
@@ -99,7 +101,10 @@ function create_chart
 		create_dashboard
 	fi	
 	kubectl config set-context $(kubectl config current-context) --namespace=tick
-	echo "Influxdb Endpoint : " $INFLUX_URL":8086"
+	echo "Influxdb Endpoint URL : " $INFLUX_URL":8086"
+	echo ""
+	echo ""
+	echo "Chronograf Endpoint URL : " $Chronograf_URL
 }
 
 function destroy_chart
