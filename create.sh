@@ -30,6 +30,7 @@ function create_chart
 	if [ $component == "influxdb" ]; then
 
 		helm install --name data --namespace tick influxdb
+		echo Deploying influxdb .....
 		sleep 60
 		#influxURL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 		#echo INFLUX_URL="$influxURL" >> ~/.bashrc
@@ -38,6 +39,7 @@ function create_chart
 
 	 	sed "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml	
 		helm install --name alerts --namespace tick kapacitor
+		echo Deploying Kapacitor .....
 		sleep 60
 		kapacitorURL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
 		#echo KAPACITOR_URL="$kapacitorURL" >> ~/.bashrc
@@ -45,6 +47,7 @@ function create_chart
 	elif [ $component == "chronograf" ]; then
 		
 		helm install --name dash --namespace tick chronograf
+		echo Deploying Chronograf .....
 		sleep 180
 		create_dashboard
 	elif [ $component == "telegraf-s" ]; then
@@ -69,12 +72,14 @@ function create_chart
 	else
 		
 		helm install --name data --namespace tick influxdb
+		echo Deploying Influxdb .....
 		sleep 120
 
         INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 
 		sed "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml
         helm install --name alerts --namespace tick kapacitor
+		echo Deploying Kapacitor .....
         sleep 120
 	
 		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
@@ -89,11 +94,12 @@ function create_chart
 		helm install --name hosts --namespace tick telegraf-ds
 
 		helm install --name dash --namespace tick chronograf
+		echo Deploying Chronograf .....
 		sleep 120	
 		create_dashboard
 	fi	
 	kubectl config set-context $(kubectl config current-context) --namespace=tick
-
+	echo "Influxdb Endpoint : " $INFLUX_URL":8086"
 }
 
 function destroy_chart
