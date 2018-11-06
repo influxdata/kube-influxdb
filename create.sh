@@ -51,7 +51,6 @@ function create_chart
 		echo Deploying Chronograf .....
 		sleep 180
 		create_dashboard
-		Chronograf_URL=`(kubectl describe svc dash-chronograf | grep "Ingress" | awk '{print $3}')`
 	elif [ $component == "telegraf-s" ]; then
 	
 		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
@@ -101,10 +100,11 @@ function create_chart
 		create_dashboard
 	fi	
 	kubectl config set-context $(kubectl config current-context) --namespace=tick
-	echo "Influxdb Endpoint URL : " $INFLUX_URL":8086"
-	echo ""
-	echo ""
-	echo "Chronograf Endpoint URL : " $Chronograf_URL
+	printf "\n\n=======================================================================\n"
+	Chronograf_URL=`(kubectl describe svc dash-chronograf | grep "Ingress" | awk '{print $3}')`
+	printf "\nChronograf Endpoint URL : " $Chronograf_URL
+	printf "\n\nInfluxdb Endpoint URL : " $INFLUX_URL":8086"
+	printf "\n=======================================================================\n"
 }
 
 function destroy_chart
@@ -134,7 +134,7 @@ function create_dashboard
 	cd chronograf/dashboards
   		for file in *
   		do
-	 		curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
+	 		curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST -o output.txt;
 	 	done
 }
 
