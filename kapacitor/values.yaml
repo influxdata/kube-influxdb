@@ -10,10 +10,9 @@ image:
 ## ref: http://kubernetes.io/docs/user-guide/services/
 ##
 service:
-  #type: NodePort # Minikube
-  type: LoadBalancer # Any Public Cloud
-
-
+  replicas: 1
+  type: LoadBalancer
+  
 ## Persist data to a persitent volume
 ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
