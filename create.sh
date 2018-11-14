@@ -119,10 +119,9 @@ function create_chart
 		helm install --name data --namespace tick influxdb
 		echo Deploying Influxdb .....
 		if [[ $service == "aws" ]]; then
-
+			sleep 120
 		    INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 			sed -i "/influxURL: /c influxURL: http://$INFLUX_URL:8086" kapacitor/values.yaml
-			sleep 120
 		else 
 			sleep 60
 		fi	
