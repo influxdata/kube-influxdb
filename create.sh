@@ -18,7 +18,12 @@ function main
 	else 
 		echo "Service is not valid !!!"
 	fi	
-	
+	#sed -i "/[ ]*type: /c \  type: $service" chronograf/values.yaml
+	#sed -i "/[ ]*type: /c \  type: $service" influxdb/values.yaml
+	#sed -i "/[ ]*type: /c \  type: $service" kapacitor/values.yaml
+	#sed -i "/[ ]*type: /c \  type: $service" telegraf-s/values.yaml
+
+
 	# if [ $ACTION == 'create' ]; then	
 	# 	create_chart $COMPONENT
 		
@@ -94,6 +99,7 @@ function create_chart
 			KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
 			sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
 			sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml	
+
 			echo $INFLUX_URL
 			echo $KAPACITOR_URL
 		fi
@@ -115,13 +121,13 @@ function create_chart
 		if [[ $service == "aws" ]]; then
 
 		    INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-			sed -i "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml
+			sed -i "/influxURL: /c influxURL: http://$INFLUX_URL:8086" kapacitor/values.yaml
 			sleep 120
 		else 
 			sleep 60
 		fi	
 
-        helm install --name alerts --namespace tick kapacitor
+		helm install --name alerts --namespace tick kapacitor
 		echo Deploying Kapacitor .....
         
 		if [[ $service == "aws" ]]; then
@@ -144,7 +150,7 @@ function create_chart
 		fi
 
 		helm install --name hosts --namespace tick telegraf-ds
-
+		
 		helm install --name dash --namespace tick chronograf
 		echo Deploying Chronograf .....
 		#sleep 120
