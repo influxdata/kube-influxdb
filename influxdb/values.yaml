@@ -10,7 +10,7 @@ image:
 ## ref: http://kubernetes.io/docs/user-guide/services/
 ##
 service:
-  type: LoadBalancer
+  type: NodePort
   
 ## Persist data to a persitent volume
 ##
@@ -96,7 +96,7 @@ config:
   http:
     enabled: true
     bind_address: 8086
-    nodePort: 30080
+    nodePort: 30082
     auth_enabled: false
     log_enabled: true
     write_tracing: false

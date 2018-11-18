@@ -12,7 +12,7 @@ spec:
   ports:
   - port: 9092
     targetPort: 9092
-    nodePort: 30081
+    nodePort: 30083
     name: api
   selector:
     app: {{ template "fullname" . }}

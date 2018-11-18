@@ -40,8 +40,16 @@ function chart_execution
 	component=$2
 	service=$3
 	if [ $action == 'create' ]; then
+		# create kube state metrics
+		kubectl apply -f kube-state-metrics/
+		
+		# create charts
 		create_chart $component $service
 	elif [ $ACTION == 'destroy' ]; then
+		# destroy kube state metrics
+		#kubectl delete -f kube-state-metrics/
+
+		# destroy charts
 		destroy_chart $component $service
 	else
 		echo "Action is not valid !!!"
@@ -58,28 +66,38 @@ function create_chart
 	INFLUX_URL=""
 	kAPACITOR_URL=""
 	Chronograf_URL=""
+	minikube_ip=""
+
 	# Initiaize the helm
 	helm init
+
 
 	echo "Creating chart for" $component
 	if [[ $component == "influxdb" ]]; then
 
 		helm install --name data --namespace tick influxdb
 		echo Deploying influxdb .....
-		sleep 60
+		if [[ $service == "aws" ]]; then
+			sleep 120;
+		fi
 		#influxURL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 		#echo INFLUX_URL="$influxURL" >> ~/.bashrc
 	
 	elif [[ $component == "kapacitor" ]]; then
 
+	 	echo Deploying Kapacitor .....
 	 	if [[ $service == "aws" ]]; then
-	 		sed "/influxURL: /c influxURL: http://$INFLUX_URL" kapacitor/values.yaml	
+	 		sed -i "/influxURL: /c influxURL: http://$INFLUX_URL:8086" kapacitor/values.yaml	
+			helm install --name alerts --namespace tick kapacitor
+			sleep 120;
+		else
+			minikube_ip=$(minikube ip)
+			sed -i "/influxURL: /c influxURL: http://$minikube_ip:30082" kapacitor/values.yaml
+			helm install --name alerts --namespace tick kapacitor
+			sleep 30;
 		fi	
 		
-		helm install --name alerts --namespace tick kapacitor
-		echo Deploying Kapacitor .....
-		sleep 60
-		kapacitorURL=`(kubectl describe service alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
+		#kapacitorURL=`(kubectl describe service alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
 		#echo KAPACITOR_URL="$kapacitorURL" >> ~/.bashrc
 
 	elif [[ $component == "chronograf" ]]; then
@@ -91,27 +109,38 @@ function create_chart
 
 	elif [[ $component == "telegraf-s" ]]; then
 	
+		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+        kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+			
 		if [[ $service == "aws" ]]; then
 	 	
-			influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-        	kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
 			INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 			KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
 			sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
 			sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml	
 
-			echo $INFLUX_URL
-			echo $KAPACITOR_URL
+		else
+
+			minikube_ip=$(minikube ip)
+			sed -i "s/$influxURL/$minikube_ip:30082/g" telegraf-s/values.yaml
+        	sed -i "s/$kapacitor/$minikube_ip:30083/g" telegraf-s/values.yaml
+
 		fi
 		helm install --name polling --namespace tick telegraf-s
 
 	elif [[ $component == "telegraf-ds" ]]; then
 		
 		if [[ $service == "aws" ]]; then
-			influxURL=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
 			INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-			sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
+			sed -i "s/$telInfluxUrl/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
+		else
+			minikube_ip=$(minikube ip)
+			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+			sed -i "s/$telInfluxUrl/$minikube_ip:30082/g" telegraf-ds/values.yaml
+	
 		fi
+
 		helm install --name hosts --namespace tick telegraf-ds	
 
 	else
@@ -123,10 +152,12 @@ function create_chart
 		    INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
 			sed -i "/influxURL: /c influxURL: http://$INFLUX_URL:8086" kapacitor/values.yaml
 		else 
-			sleep 60
+			minikube_ip=$(minikube ip)
+			sed -i "/influxURL: /c influxURL: http://$minikube_ip:30082" kapacitor/values.yaml
+			sleep 30
 		fi	
-
-		helm install --name alerts --namespace tick kapacitor
+	
+	 	helm install --name alerts --namespace tick kapacitor
 		echo Deploying Kapacitor .....
         
 		if [[ $service == "aws" ]]; then
@@ -136,28 +167,39 @@ function create_chart
     	    KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
         	sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
         	sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml
-        	sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
+        	#sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
 		else
-			sleep 60
+			minikube_ip=$(minikube ip)
+			influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
+			kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
+			sed -i "s/$influxURL/$minikube_ip:30082/g" telegraf-s/values.yaml
+        	sed -i "s/$kapacitor/$minikube_ip:30083/g" telegraf-s/values.yaml
+        	sleep 30
 		fi	
 		
-		helm install --name polling --namespace tick telegraf-s
+	 	helm install --name polling --namespace tick telegraf-s
 		
 		if [[ $service == "aws" ]]; then
 			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
 			sed -i "s/$telInfluxUrl/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
+		else
+			minikube_ip=$(minikube ip)
+			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+			sed -i "s/$telInfluxUrl/$minikube_ip:30082/g" telegraf-ds/values.yaml
+	
 		fi
-
+	
 		helm install --name hosts --namespace tick telegraf-ds
 		
 		helm install --name dash --namespace tick chronograf
 		echo Deploying Chronograf .....
-		#sleep 120
 		if [[ $service == "aws" ]]; then
 			sleep 120
 		else
-			sleep 60
+			sleep 30
 		fi
+
+		# call Dashboard function
 		create_dashboard $service
 	fi	
 	kubectl config set-context $(kubectl config current-context) --namespace=tick
@@ -169,7 +211,7 @@ function create_chart
 		echo "Influxdb Endpoint URL:" $Influx_URL":8086"
 	else
 		echo "Chronograf Endpoint URL:" $(minikube ip):30088
-		echo "Influxdb Endpoint URL:" $(minikube ip):30080
+		echo "Influxdb Endpoint URL:" $(minikube ip):30082
 	fi
 
 	printf "\n=======================================================================\n"
@@ -208,7 +250,7 @@ function create_dashboard
 	 cd chronograf/dashboards
     		for file in *
     		do
-	   		curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST -o output.txt;
+	   		curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 		   	done
 }
 

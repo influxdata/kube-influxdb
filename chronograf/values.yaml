@@ -12,7 +12,7 @@ image:
 ##
 service:
   replicas: 1
-  type: LoadBalancer
+  type: NodePort
   
 ## Persist data to a persitent volume
 ##

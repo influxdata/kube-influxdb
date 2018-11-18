@@ -11,8 +11,8 @@ image:
 ##
 service:
   replicas: 1
-  type: LoadBalancer
-  
+  #type: LoadBalancer
+  type: NodePort
 ## Persist data to a persitent volume
 ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
@@ -54,4 +54,4 @@ affinity: {}
 ## Set the URL of InfluxDB instance to create subscription on
 ## ref: https://docs.influxdata.com/kapacitor/v1.5/introduction/getting_started/
 ##
-influxURL: http://192.168.99.100:30080
+influxURL: http://192.168.99.100:30082

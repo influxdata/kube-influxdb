@@ -36,7 +36,7 @@ config:
     flush_jitter: "0s"
   outputs:
     - influxdb:
-        url: "http://192.168.99.100:30080/"
+        url: "http://192.168.99.100:30082"
         database: "telegraf"
         retention_policy: ""
         timeout: "5s"
@@ -56,3 +56,7 @@ config:
         total: false
         docker_label_exclude:
           - "annotation.kubernetes.io/*"
+    - prometheus:
+        urls: ["http://192.168.99.100:30080/metrics","http://192.168.99.100:30081/metrics"]
+
+  
