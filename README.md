@@ -25,6 +25,20 @@ Run the complete TICK stack using this using create.sh script. By using `create.
   - Run `helm init` to install `tiller` in your cluster
     * [link](https://github.com/kubernetes/helm/blob/master/docs/install.md#installing-tiller)
 
+- In following section you will require the k8S cluster url, Please use following kubeclt command to get k8S cluster url. 
+   `kubectl cluster-info`
+   
+    ###### Output of the  `kubectl cluster-info` command:
+   
+    ```
+    Kubernetes master is running at https://api.tickstackcluster.k8slab.xyz
+    
+    KubeDNS is running at https://api.tickstackcluster.k8slab.xyz/api/v1/namespaces/kube-system/services/kube-dns/proxy
+    
+    To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+    ```
+    
+    ###### Note - From above output master url is cluster name which you need to use in following sections. Don't use above 			output, it is only example to show the command output.
 
 #### OSS kubernetes Cluster:
 
@@ -41,7 +55,7 @@ Run the complete TICK stack using this using create.sh script. By using `create.
 - Update the following values:
 
   - Add the name of K8S cluster in scripts/aws.sh file. 
-     ##### Search for `ClusterName` in the script and Replace value 'api.tickstackcluster.com' with actual cluster Name.
+     ##### Search for `ClusterName` in the script and Replace value 'api.tickstackcluster.com' with actual k8S cluster name or dns.
         ClusterName="`api.tickstackcluster.com`"
 
   - Add the value of influxUrl in kapacitor/values.yaml. Please don't change port `30082`
@@ -81,7 +95,7 @@ and NodePort In EKS tick stack deployment, service type is LoadBalancer, so it w
         `type: NodePort`
 
   - Change the type from `NodePort` to `LoadBalancer` in `kube-state-metrics-service.yaml` file inside `kube-state-metrics` folder
-  #####  Search for `type: NodePort` in yaml and replace a value of key `type` with `LoadBalancer`.
+    #####  Search for `type: NodePort` in yaml and replace a value of key `type` with `LoadBalancer`.
         `type: NodePort`
 
 
