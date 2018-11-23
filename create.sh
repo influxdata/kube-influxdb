@@ -4,254 +4,29 @@ function main
 {
 	initScript "$@"
 	
-	echo "Component:" $COMPONENT
+	echo "Service:" $SERVICE
 	echo "Action:" $ACTION
 	
-	if [[ $SERVICE == 'minikube' ]]; then
-		echo "Service:" $SERVICE
-		chart_execution $ACTION $COMPONENT $SERVICE
-	elif [[ $SERVICE == 'aws' ]]; then
-		echo "Service:" $SERVICE
-		chart_execution $ACTION $COMPONENT $SERVICE
-	elif [[ $SERVICE == '' ]]; then
-		echo "Service is empty"
+	if [[ $COMPONENT == 'minikube' ]]; then
+		echo "Component:" $COMPONENT
+		#chart_execution $ACTION $COMPONENT $SERVICE
+		scripts/minikube.sh $SERVICE $ACTION
+	
+	elif [[ $COMPONENT == 'aws' ]]; then
+		echo "Component:" $COMPONENT $ACTION
+		#chart_execution $ACTION $COMPONENT $SERVICE
+		scripts/aws.sh $SERVICE $ACTION
+
+	elif [[ $COMPONENT == 'eks' ]]; then
+		echo "Component:" $COMPONENT $ACTION
+		#chart_execution $ACTION $COMPONENT $SERVICE
+		scripts/eks.sh $SERVICE $ACTION
+
+	elif [[ $COMPONENT == '' ]]; then
+		echo "Component is empty"
 	else 
-		echo "Service is not valid !!!"
-	fi	
-	#sed -i "/[ ]*type: /c \  type: $service" chronograf/values.yaml
-	#sed -i "/[ ]*type: /c \  type: $service" influxdb/values.yaml
-	#sed -i "/[ ]*type: /c \  type: $service" kapacitor/values.yaml
-	#sed -i "/[ ]*type: /c \  type: $service" telegraf-s/values.yaml
-
-
-	# if [ $ACTION == 'create' ]; then	
-	# 	create_chart $COMPONENT
-		
-	# elif [ $ACTION == 'destroy' ]; then
-	# 	destroy_chart $COMPONENT
-	# else
-	# 	echo "Action is not valid !!!"
-	# fi	
-}
-
-function chart_execution
-{
-	action=$1
-	component=$2
-	service=$3
-	if [ $action == 'create' ]; then
-		# create kube state metrics
-		kubectl apply -f kube-state-metrics/
-		
-		# create charts
-		create_chart $component $service
-	elif [ $ACTION == 'destroy' ]; then
-		# destroy kube state metrics
-		#kubectl delete -f kube-state-metrics/
-
-		# destroy charts
-		destroy_chart $component $service
-	else
-		echo "Action is not valid !!!"
-	fi	
-}
-
-function create_chart
-{
-	component=$1
-	service=$2
-	influxURL=""
-	kapacitorURL=""
-	telInfluxUrl=""
-	INFLUX_URL=""
-	kAPACITOR_URL=""
-	Chronograf_URL=""
-	minikube_ip=""
-
-	# Initiaize the helm
-	helm init
-
-
-	echo "Creating chart for" $component
-	if [[ $component == "influxdb" ]]; then
-
-		helm install --name data --namespace tick influxdb
-		echo Deploying influxdb .....
-		if [[ $service == "aws" ]]; then
-			sleep 120;
-		fi
-		#influxURL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-		#echo INFLUX_URL="$influxURL" >> ~/.bashrc
-	
-	elif [[ $component == "kapacitor" ]]; then
-
-	 	echo Deploying Kapacitor .....
-	 	if [[ $service == "aws" ]]; then
-	 		sed -i "/influxURL: /c influxURL: http://$INFLUX_URL:8086" kapacitor/values.yaml	
-			helm install --name alerts --namespace tick kapacitor
-			sleep 120;
-		else
-			minikube_ip=$(minikube ip)
-			sed -i "/influxURL: /c influxURL: http://$minikube_ip:30082" kapacitor/values.yaml
-			helm install --name alerts --namespace tick kapacitor
-			sleep 30;
-		fi	
-		
-		#kapacitorURL=`(kubectl describe service alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
-		#echo KAPACITOR_URL="$kapacitorURL" >> ~/.bashrc
-
-	elif [[ $component == "chronograf" ]]; then
-		
-		helm install --name dash --namespace tick chronograf
-		echo Deploying Chronograf .....
-		sleep 60
-		create_dashboard $service
-
-	elif [[ $component == "telegraf-s" ]]; then
-	
-		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-        kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-			
-		if [[ $service == "aws" ]]; then
-	 	
-			INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-			KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
-			sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
-			sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml	
-
-		else
-
-			minikube_ip=$(minikube ip)
-			sed -i "s/$influxURL/$minikube_ip:30082/g" telegraf-s/values.yaml
-        	sed -i "s/$kapacitor/$minikube_ip:30083/g" telegraf-s/values.yaml
-
-		fi
-		helm install --name polling --namespace tick telegraf-s
-
-	elif [[ $component == "telegraf-ds" ]]; then
-		
-		if [[ $service == "aws" ]]; then
-			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-			INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-			sed -i "s/$telInfluxUrl/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
-		else
-			minikube_ip=$(minikube ip)
-			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-			sed -i "s/$telInfluxUrl/$minikube_ip:30082/g" telegraf-ds/values.yaml
-	
-		fi
-
-		helm install --name hosts --namespace tick telegraf-ds	
-
-	else
-		
-		helm install --name data --namespace tick influxdb
-		echo Deploying Influxdb .....
-		if [[ $service == "aws" ]]; then
-			sleep 120
-		    INFLUX_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-			sed -i "/influxURL: /c influxURL: http://$INFLUX_URL:8086" kapacitor/values.yaml
-		else 
-			minikube_ip=$(minikube ip)
-			sed -i "/influxURL: /c influxURL: http://$minikube_ip:30082" kapacitor/values.yaml
-			sleep 30
-		fi	
-	
-	 	helm install --name alerts --namespace tick kapacitor
-		echo Deploying Kapacitor .....
-        
-		if [[ $service == "aws" ]]; then
-			sleep 120
-			influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-			kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-    	    KAPACITOR_URL=`(kubectl describe svc alerts-kapacitor | grep "Ingress" | awk '{print $3}')`
-        	sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-s/values.yaml
-        	sed -i "s/$kapacitor/$KAPACITOR_URL:9092/g" telegraf-s/values.yaml
-        	#sed -i "s/$influxURL/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
-		else
-			minikube_ip=$(minikube ip)
-			influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-			kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-			sed -i "s/$influxURL/$minikube_ip:30082/g" telegraf-s/values.yaml
-        	sed -i "s/$kapacitor/$minikube_ip:30083/g" telegraf-s/values.yaml
-        	sleep 30
-		fi	
-		
-	 	helm install --name polling --namespace tick telegraf-s
-		
-		if [[ $service == "aws" ]]; then
-			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-			sed -i "s/$telInfluxUrl/$INFLUX_URL:8086/g" telegraf-ds/values.yaml
-		else
-			minikube_ip=$(minikube ip)
-			telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-			sed -i "s/$telInfluxUrl/$minikube_ip:30082/g" telegraf-ds/values.yaml
-	
-		fi
-	
-		helm install --name hosts --namespace tick telegraf-ds
-		
-		helm install --name dash --namespace tick chronograf
-		echo Deploying Chronograf .....
-		if [[ $service == "aws" ]]; then
-			sleep 120
-		else
-			sleep 30
-		fi
-
-		# call Dashboard function
-		create_dashboard $service
-	fi	
-	kubectl config set-context $(kubectl config current-context) --namespace=tick
-	printf "\n\n=======================================================================\n"
-	if [[ $service == "aws" ]]; then
-		Chronograf_URL=`(kubectl describe services dash-chronograf | grep "Ingress" | awk '{print $3}')`
-		Influx_URL=`(kubectl describe svc data-influxdb | grep "Ingress" | awk '{print $3}')`
-		echo "Chronograf Endpoint URL:" $Chronograf_URL
-		echo "Influxdb Endpoint URL:" $Influx_URL":8086"
-	else
-		echo "Chronograf Endpoint URL:" $(minikube ip):30088
-		echo "Influxdb Endpoint URL:" $(minikube ip):30082
-	fi
-
-	printf "\n=======================================================================\n"
-}
-
-function destroy_chart
-{
-	component=$1
-	echo "Destorying chart of" $component
-	if [ $component == "influxdb" ]; then
-		helm delete data --purge
-	elif [ $component == "kapacitor" ]; then
-		helm delete alerts --purge	
-	elif [ $component == "chronograf" ]; then
-		helm delete dash --purge
-	elif [ $component == "telegraf-s" ]; then
-		helm delete polling --purge
-	elif [ $component == "telegraf-ds" ]; then
-		helm delete hosts --purge
-	else	
-		helm delete data alerts dash polling hosts --purge
-	fi
-}
-
-function create_dashboard
-{
-	service=$1
-	if [[ $service == "minikube" ]]; then
-		dashboard=$(minikube ip)
-		DST=http://$dashboard:30088/chronograf/v1/dashboards
-	elif [[ $service == "aws" ]]; then
-		dashboard=`(kubectl describe svc dash-chronograf | grep "Ingress" | awk '{print $3}')`
-		DST=http://$dashboard/chronograf/v1/dashboards
-	fi 
-	 echo $DST
-	 cd chronograf/dashboards
-    		for file in *
-    		do
-	   		curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
-		   	done
+		echo "Component is not valid !!!"
+	fi		
 }
 
 function usage
@@ -259,20 +34,23 @@ function usage
 	cat <<EOF
 
     Usage:
-        -c component:  The name of the component. Valid options are influxdb, kapacitor, telegraf-s, telegraf-ds, chronograf and all
+        -c component: Valid options are aws, eks and minikube 
         -a action: Valid options are create and destroy
-        -s service: Valid options are minikube and aws
+        -s service: The name of the component. Valid options are influxdb, kapacitor, telegraf-s, telegraf-ds, chronograf and all
     Examples:
-        ./create.sh -c influxdb -a create -s minikube
-        ./create.sh -c influxdb -a destroy -s minikube
+        ./create.sh -s influxdb -a create -c aws
+        ./create.sh -s influxdb -a destroy -c aws
+
+        ./create.sh -s all -a create -c aws
+		./create.sh -s all -a delete -c aws
 EOF
 }
 
 function initScript
 {
-	COMPONENT="all"
+	COMPONENT=""
 	ACTION="create"
-	SERVICE=""
+	SERVICE="all"
 	while getopts h:a:c:s: opt
 		do
 			case "$opt" in
@@ -285,5 +63,4 @@ function initScript
 		done
 
 }
-
 main "$@"

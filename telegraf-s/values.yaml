@@ -64,7 +64,7 @@ config:
   outputs:
     - influxdb:
         urls:
-          - "http://192.168.99.100:30082"
+          - "http://tickstackcluster.com:30082"
         database: "telegraf"
 ##        retention_policy: ""
 ##        write_consistency: "any"
@@ -231,15 +231,15 @@ config:
 ##          - "http://myhaproxy.com:1936/haproxy?stats"
     - influxdb:
         urls:
-          - "http://192.168.99.100:30082/debug/vars"
+          - "http://tickstackcluster.com:30082/debug/vars"
         timeout: "5s"
     - kapacitor:
         urls:
-          - "http://192.168.99.100:30083"
+          - "http://tickstackcluster.com:30083"
         timeout: "5s"
     - kapacitor:
         urls:
-          - "http://192.168.99.100:30083/debug/vars"
+          - "http://tickstackcluster.com:30083/debug/vars"
         timeout: "5s"
 ##      lustre2:
 ##        ost_procfiles:

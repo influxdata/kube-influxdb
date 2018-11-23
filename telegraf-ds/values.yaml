@@ -36,7 +36,7 @@ config:
     flush_jitter: "0s"
   outputs:
     - influxdb:
-        url: "http://192.168.99.100:30082"
+        url: "http://tickstackcluster.com:30082"
         database: "telegraf"
         retention_policy: ""
         timeout: "5s"
@@ -57,6 +57,6 @@ config:
         docker_label_exclude:
           - "annotation.kubernetes.io/*"
     - prometheus:
-        urls: ["http://192.168.99.100:30080/metrics","http://192.168.99.100:30081/metrics"]
+        urls: ["http://tickstackcluster.com:30080/metrics","http://tickstackcluster.com:30081/metrics"]
 
   

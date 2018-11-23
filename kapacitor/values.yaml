@@ -1,4 +1,3 @@
-## kapacitor image version
 ## ref: https://hub.docker.com/r/library/kapacitor/tags/
 ##
 image:
@@ -11,8 +10,8 @@ image:
 ##
 service:
   replicas: 1
-  #type: LoadBalancer
   type: NodePort
+  #type: NodePort
 ## Persist data to a persitent volume
 ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
@@ -54,4 +53,4 @@ affinity: {}
 ## Set the URL of InfluxDB instance to create subscription on
 ## ref: https://docs.influxdata.com/kapacitor/v1.5/introduction/getting_started/
 ##
-influxURL: http://192.168.99.100:30082
+influxURL: http://tickstackcluster.com:30082
