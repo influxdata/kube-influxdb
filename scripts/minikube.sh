@@ -100,8 +100,8 @@ function create_chart
 	else
 		deploy_service data influxdb
 		echo Deploying Influxdb .....
-		sed -i "/influxURL: /c influxURL: http://$minikubeIp:30082" kapacitor/values.yaml
 		sleep 30;
+		sed -i "/influxURL: /c influxURL: http://$minikubeIp:30082" kapacitor/values.yaml
 		
 		# Deploying kapacitor service
 	 	echo Deploying Kapacitor .....
@@ -117,8 +117,10 @@ function create_chart
 	 	echo Deploying telegraf-s .....
 	 	deploy_service polling telegraf-s
 		telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+		promethesusUrl=`cat telegraf-ds/values.yaml  | grep -A2 "prometheus" | grep "urls" | sed -e 's/.*\/\/\(.*\):.*/\1/'`
 		sed -i "s/$telInfluxUrl/$minikubeIp:30082/g" telegraf-ds/values.yaml
-		
+		sed -i "s/$promethesusUrl/$minikubeIp/g" telegraf-ds/values.yaml
+
 		# Deploying telegraf-ds service
 		deploy_service hosts telegraf-ds
 

@@ -31,9 +31,9 @@ Run the complete TICK stack using this using create.sh script. By using `create.
     ###### Output of the  `kubectl cluster-info` command:
    
     ```
-    Kubernetes master is running at https://api.tickstackcluster.k8slab.xyz
+    Kubernetes master is running at https://api.tickstackcluster.com
     
-    KubeDNS is running at https://api.tickstackcluster.k8slab.xyz/api/v1/namespaces/kube-system/services/kube-dns/proxy
+    KubeDNS is running at https://api.tickstackcluster.com/api/v1/namespaces/kube-system/services/kube-dns/proxy
     
     To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
     ```
