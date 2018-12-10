@@ -6,6 +6,7 @@ function main
 	service=$1
 	action=$2
 	if [[ $action == 'create' ]]; then
+
 		# create cluster-role-binding
 		kubectl create -f rbac-config.yaml
 		kubectl create serviceaccount --namespace kube-system tiller
@@ -14,6 +15,7 @@ function main
 
 		# create kube state metrics
 		kubectl apply -f kube-state-metrics/
+		kubectl config set-context $(kubectl config current-context) --namespace=kube-system
 		# Initiaize the helm in the cluster
 		helm init 
 		sleep 20;
@@ -108,19 +110,12 @@ function create_chart
 function create_dashboard
 {
 	DST=http://$cluster_name:30088/chronograf/v1/dashboards
-	cd ./chronograf/dashboards/common
+	cd ./chronograf/dashboards
     	
     for file in *
     do
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
-
-	cd ../aws-cloudwatch/
-
-    for file in *
-    do
-        curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
-    done
 }
 
 
@@ -145,6 +140,6 @@ function destroy_chart
 
 function initScript
 {
-	echo "Tick Charts for EKS"	
+	echo "Tick Charts for openshift"	
 }
 main "$@"

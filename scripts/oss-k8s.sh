@@ -5,13 +5,23 @@ function main
 	initScript "$@"
 	service=$1
 	action=$2
+
+
 	if [[ $action == 'create' ]]; then
+
+		# create cluster-role-binding
+		kubectl create -f rbac-config.yaml
+		kubectl create serviceaccount --namespace kube-system tiller
+		kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+		kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
+		
 		# create kube state metrics
 		kubectl apply -f kube-state-metrics/
 		
 		# Initiaize the helm in the cluster
 		helm init 
 		sleep 20;
+
 		# create charts
 		create_chart $service
 	elif [[ $action == 'destroy' ]]; then
@@ -26,96 +36,66 @@ function create_chart
 {
 	service=$1
 	action=$2
-	influxURL=""
-	kapacitorURL=""
-	telInfluxUrl=""
-	INFLUX_URL=""
-	kAPACITOR_URL=""
-	chronografURL=""
-	prometheusUrl=""
 
-	influxPort=30082
-	kapacitorPort=30083
-	chronografPort=30088
+	influx_port=30082
+	kapacitor_port=30083
+	chronograf_port=30088
 
-	# Replace the cluster Name
-	ClusterName="tickstackcluster.com"
+	# Replace Any NodeIP/URL
+	cluster_name="tickstackcluster.com"
 	kubectl config set-context $(kubectl config current-context) --namespace=tick
+
+	
 	echo "Creating chart for" $service
-	if [[ $service == "influxdb" ]]; then
-
-		# Deploying influxdb service
-		echo Deploying influxdb .....
-		deploy_service data $service
-		sleep 30;
-		
-		printf "\n\n=======================================================================\n"
-		echo "Influxdb Endpoint URL:" $ClusterName:$influxPort
-		printf "\n\n=======================================================================\n"
-		
-	elif [[ $service == "kapacitor" ]]; then
-
-		echo Deploying Kapacitor .....
-		# Deploying kapacitor service
-		deploy_service alerts $service
-		sleep 30;
-		
-		printf "\n\n=======================================================================\n"
-		echo "Kapacitor Endpoint URL:" $ClusterName:$kapacitorPort
-		printf "\n\n=======================================================================\n"
-		
-		
-	elif [[ $service == "chronograf" ]]; then
-		
-		deploy_service dash $service
-		echo Deploying Chronograf .....
-		sleep 60;
-		# Deploying chronograf service
-		create_dashboard 
-		printf "\n\n=======================================================================\n"
-		echo "Chronograf Endpoint URL:" $ClusterName:$chronografPort
-		printf "\n=======================================================================\n"
-
-	elif [[ $service == "telegraf-s" ]]; then
-	
-		# Deploying telegraf-ds service
-		deploy_service polling $service
-	
-	elif [[ $service == "telegraf-ds" ]]; then
-
-		# Deploying telegraf-ds service
-		deploy_service hosts $service
-	else
-		deploy_service data influxdb
+	if [ $service == "influxdb" ] || [ $service == "all" ]; then
+		# Deploying Influxdb service
 		echo Deploying Influxdb .....
-		sleep 30;
-		
+		helm install --name data --namespace tick influxdb
+		sleep 30;	
+		printf "\n\n=======================================================================\n"
+		echo "Influxdb Endpoint URL:" $cluster_name:$influx_port
+		printf "\n\n=======================================================================\n"	
+	fi
+
+	if [ $service == "kapacitor" ] || [ $service == "all" ]; then
 		# Deploying kapacitor service
-	 	echo Deploying Kapacitor .....
-        deploy_service alerts kapacitor
+		echo Deploying Kapacitor .....
+        helm install --name alerts --namespace tick kapacitor
 		sleep 30;
-
-        # Deploying telegaf-s service
-	 	echo Deploying telegraf-s .....
-	 	deploy_service polling telegraf-s
+		printf "\n\n=======================================================================\n"
+		echo "Kapacitor Endpoint URL:" $cluster_name:$kapacitor_port
+		printf "\n\n=======================================================================\n"
+	fi
+		
+	if [ $service == "telegraf-s" ] || [ $service == "all" ]; then
 		# Deploying telegraf-ds service
-		deploy_service hosts telegraf-ds
+		echo Deploying telegraf-s .....
+	 	helm install --name polling --namespace tick telegraf-s
+		
+	fi	
 
+	if [ $service == "telegraf-ds" ] || [ $service == "all" ]; then
+		# Deploying telegraf-ds service
+		echo Deploying telegraf-s .....
+	 	helm install --name hosts --namespace tick telegraf-ds
+	fi
+
+	if [ $service == "chronograf" ] || [ $service == "all" ]; then
 		# Deploying chronograf service
 		echo Deploying Chronograf .....
-		deploy_service dash chronograf
-
+		helm install --name dash --namespace tick chronograf
 		sleep 60;
-
-		# Call dashboard function
-		create_dashboard 
-
+		create_dashboard
 		printf "\n\n=======================================================================\n"
+		echo "Chronograf Endpoint URL:" $cluster_name:$chronograf_port
+		printf "\n\n=======================================================================\n"
+	fi	
 
-		echo "Influxdb Endpoint URL:" $ClusterName:$influxPort
-		echo "Chronograf Endpoint URL:" $ClusterName:$chronografPort
-		echo "Kapacitor Endpoint URL:" $ClusterName:$kapacitorPort
-
+	if [ $service == "all" ]; then
+		printf "\n\n=======================================================================\n"
+		echo "Influxdb Endpoint URL:" $cluster_name:$influx_port
+		echo "Chronograf Endpoint URL:" $cluster_name:$chronograf_port
+		echo "Kapacitor Endpoint URL:" $cluster_name:$kapacitor_port
 		printf "\n=======================================================================\n"
 	fi
 }
@@ -123,22 +103,23 @@ function create_chart
 function create_dashboard
 {
 	
-	DST=http://$ClusterName:30088/chronograf/v1/dashboards
-	cd ./chronograf/dashboards
+	DST=http://$cluster_name:30088/chronograf/v1/dashboards
+	cd ./chronograf/dashboards/common
     	
     for file in *
     do
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
+
+	cd ../aws-cloudwatch/
+
+    for file in *
+    do
+                curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
+    done
+
 }
 
-
-function deploy_service
-{
-	service_alias=$1
-	service=$2
-	helm install --name $service_alias --namespace tick $service
-}
 
 function destroy_chart
 {
@@ -161,6 +142,6 @@ function destroy_chart
 
 function initScript
 {
-	echo "Tick Charts for AWS"	
+	echo "Tick charts for oss-k8s"	
 }
 main "$@"

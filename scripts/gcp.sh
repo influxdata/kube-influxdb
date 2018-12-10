@@ -6,17 +6,23 @@ function main
 	service=$1
 	action=$2
 	if [[ $action == 'create' ]]; then
-		# create cluster-role-binding
+		# role based access controll
 		kubectl create -f rbac-config.yaml
 		kubectl create serviceaccount --namespace kube-system tiller
+		# create cluster-role-binding
 		kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+		kubectl create clusterrolebinding admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value core/account)
+		kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud info | grep Account | cut -d '[' -f 2 | cut -d ']' -f 1)
+		# create tiller deploy patched
 		kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
-
+	
 		# create kube state metrics
 		kubectl apply -f kube-state-metrics/
+		
 		# Initiaize the helm in the cluster
 		helm init 
-		sleep 20;
+		sleep 30;
+
 		# create charts
 		create_chart $service
 	elif [[ $action == 'destroy' ]]; then
@@ -39,22 +45,19 @@ function create_chart
 	# Replace Any NodeIP/URL
 	cluster_name="tickstackcluster.com"
 	kubectl config set-context $(kubectl config current-context) --namespace=tick
-
+	
 	echo "Creating chart for" $service
 	if [ $service == "influxdb" ] || [ $service == "all" ]; then
-		
 		# Deploying Influxdb service
 		echo Deploying Influxdb .....
 		helm install --name data --namespace tick influxdb
 		sleep 30;	
 		printf "\n\n=======================================================================\n"
 		echo "Influxdb Endpoint URL:" $cluster_name:$influx_port
-		printf "\n\n=======================================================================\n"	
-
-	fi	
-
+		printf "\n\n=======================================================================\n"		
+	fi		
+		
 	if [ $service == "kapacitor" ] || [ $service == "all" ]; then
-
 		# Deploying kapacitor service
 		echo Deploying Kapacitor .....
         helm install --name alerts --namespace tick kapacitor
@@ -62,26 +65,21 @@ function create_chart
 		printf "\n\n=======================================================================\n"
 		echo "Kapacitor Endpoint URL:" $cluster_name:$kapacitor_port
 		printf "\n\n=======================================================================\n"
-	
-	fi	
-	if [ $service == "telegraf-s" ] || [ $service == "all" ]; then
-	
+	fi
+		
+	if [ $service == "telegraf-s" ] || [ $service == "all" ]; then	
 		# Deploying telegraf-ds service
 		echo Deploying telegraf-s .....
 	 	helm install --name polling --namespace tick telegraf-s
-	
 	fi
 	
 	if [ $service == "telegraf-ds" ] || [ $service == "all" ]; then
-
 		# Deploying telegraf-ds service
 		echo Deploying telegraf-s .....
 	 	helm install --name hosts --namespace tick telegraf-ds
-	
-	fi
+	fi	
 	
 	if [ $service == "chronograf" ] || [ $service == "all" ]; then
-		
 		# Deploying chronograf service
 		echo Deploying Chronograf .....
 		helm install --name dash --namespace tick chronograf
@@ -91,36 +89,28 @@ function create_chart
 		printf "\n\n=======================================================================\n"
 		echo "Chronograf Endpoint URL:" $cluster_name:$chronograf_port
 		printf "\n\n=======================================================================\n"
-	
 	fi
-	
+
 	if [ $service == "all" ]; then
-		
 		printf "\n\n=======================================================================\n"
+
 		echo "Influxdb Endpoint URL:" $cluster_name:$influx_port
 		echo "Chronograf Endpoint URL:" $cluster_name:$chronograf_port
 		echo "Kapacitor Endpoint URL:" $cluster_name:$kapacitor_port
+
 		printf "\n=======================================================================\n"
-	
 	fi
 }
 
 function create_dashboard
 {
-	DST=http://$cluster_name:30088/chronograf/v1/dashboards
+	DST=http://$cluster_name:$chronograf_port/chronograf/v1/dashboards
 	cd ./chronograf/dashboards/common
     	
     for file in *
     do
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
-
-	cd ../aws-cloudwatch/
-
-    for file in *
-    do
-        curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
-    done
 }
 
 
@@ -145,6 +135,6 @@ function destroy_chart
 
 function initScript
 {
-	echo "Tick Charts for EKS"	
+	echo "Tick Charts for GCP"	
 }
 main "$@"
