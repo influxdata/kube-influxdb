@@ -66,6 +66,7 @@ config:
         urls:
           - "http://tickstackcluster.com:30082"
         database: "telegraf"
+
 ##        retention_policy: ""
 ##        write_consistency: "any"
 ##        timeout: "5s"
@@ -241,6 +242,44 @@ config:
         urls:
           - "http://tickstackcluster.com:30083/debug/vars"
         timeout: "5s"
+    - cpu:
+    - system:
+    - disk:
+    - diskio:
+    - mem:
+    - processes:
+    - net:
+    - swap:
+    - cloudwatch:
+        region: "us-east-1"
+        access_key: ""
+        secret_key: ""
+        period: "5m"
+        delay: "5m"
+        interval: "5m"
+        cache_ttl: "10m"
+        ratelimit: 10
+        namespace: "AWS/ELB"
+    - cloudwatch:
+        region: "us-east-1"
+        access_key: ""
+        secret_key: ""
+        period: "5m"
+        delay: "5m"
+        interval: "5m"
+        cache_ttl: "10m"
+        ratelimit: 10
+        namespace: "AWS/EC2"
+    - cloudwatch:
+        region: "us-east-1"
+        access_key: ""
+        secret_key: ""
+        period: "5m"
+        delay: "5m"
+        interval: "5m"
+        cache_ttl: "10m"
+        ratelimit: 10
+        namespace: "AWS/ELB"
 ##      lustre2:
 ##        ost_procfiles:
 ##          - "/proc/fs/lustre/obdfilter/*/stats"
