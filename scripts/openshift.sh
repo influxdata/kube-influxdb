@@ -11,14 +11,18 @@ function main
 		kubectl create -f rbac-config.yaml
 		kubectl create serviceaccount --namespace kube-system tiller
 		kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-		kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
-
+		
 		# create kube state metrics
 		kubectl apply -f kube-state-metrics/
-		kubectl config set-context $(kubectl config current-context) --namespace=kube-system
+		
 		# Initiaize the helm in the cluster
 		helm init 
 		sleep 20;
+
+		# create tiller deploy patched
+		kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
+		kubectl create serviceaccount --namespace kube-system tiller
+		
 		# create charts
 		create_chart $service
 	elif [[ $action == 'destroy' ]]; then
