@@ -14,7 +14,7 @@ Run the complete TICK stack using this using create.sh script. By using `create.
 
 ### Deploy the whole stack!
 
-#### Note: This project will currently supported only OSS kubernetes Cluster, AWS EKS and minikube 
+#### Note: This project will currently supported only OSS kubernetes Cluster, AWS EKS, GKS, OpenShift and sminikube 
 
 ### Prerequisite:
 
@@ -53,24 +53,24 @@ Run the complete TICK stack using this using create.sh script. By using `create.
 
 
 - Update the following values:
-
-  - Add the name of K8S cluster in scripts/aws.sh file. 
-     ##### Search for `ClusterName` in the script and Replace value 'api.tickstackcluster.com' with actual k8S cluster name or dns.
-        ClusterName="`api.tickstackcluster.com`"
+ 
+  - Add the name of K8S cluster in scripts/oss-k8s.sh file. 
+     ##### Search for `cluster_name` in the script and Replace value 'tickstackcluster.com' with actual k8S cluster name or dns.
+        cluster_name="`tickstackcluster.com`"
 
   - Add the value of influxUrl in kapacitor/values.yaml. Please don't change port `30082`
      ##### Search for `influxURL` in the yaml and Replace value 'api.tickstackcluster.com' with actual cluster Name.
-        influxURL: http://`api.tickstackcluster.com`:30082  
+        influxURL: http://`tickstackcluster.com`:30082  
 
   - Add the value of influxUrl in telegraf-ds/values.yaml. Please don't change port `30082`  
-     ##### Search for `influxdb` in the yaml and Replace value of url 'api.tickstackcluster.com' with actual cluster Name.
+     ##### Search for `influxdb` in the yaml and Replace value of url 'tickstackcluster.com' with actual cluster Name.
         - influxdb:
-        url: "http://`api.tickstackcluster.com`:30082"
+        url: "http://`tickstackcluster.com`:30082"
 
   - Add the value of prometheus in telegraf-ds/values.yaml. Please don't change port `30080`, `30081`
-     #####  Search for `prometheus` in the yaml and Replace value 'api.tickstackcluster.com' at 2 places in urls with actual cluster Name.
+     #####  Search for `prometheus` in the yaml and Replace value 'tickstackcluster.com' at 2 places in urls with actual cluster Name.
         - prometheus:
-        urls: ["http://`api.tickstackcluster.com`:30080/metrics","http://`api.tickstackcluster.com`:30081/metrics"]
+        urls: ["http://`tickstackcluster.com`:30080/metrics","http://`tickstackcluster.com`:30081/metrics"]
   
   - Add the value of influx and kapacitor in telegraf-s/values.yaml. Please don't change port `30082`, `30083`
      ##### Search `influxdb` in this block replace urls value `api.tickstackcluster.com` with actual cluster Name. Do the similar step for `kapacitor`. Please don't change port `30082`, `30083`
@@ -79,35 +79,55 @@ Run the complete TICK stack using this using create.sh script. By using `create.
           - "http://`api.tickstackcluster.com`:30082"
 
         - kapacitor:
-            urls:
-             - "http://`api.tickstackcluster.com`:30083"
+           urls:
+          - "http://`api.tickstackcluster.com`:30083"
 
 #### AWS EKS:
+#### GCP GKS:
+#### OpenShift:
 
-To work with AWS EKS service, this solution needed few changes in a file `values.yaml`. EKS required Loadbalancers to expose the services for this reason we need to changes service type to `LoadBalancer`. 
+- Once you deploy the cluster, open the port 30000-35000 in security group of nodes for NodePort
 
-and NodePort In EKS tick stack deployment, service type is LoadBalancer, so it will create external LoadBalancer
+- Update the following values:
 
-  - Change service type from `NodePort` to `LoadBalancer` in values.yaml of `influxdb`, `kapacito`, `telegraf-s` and `chronograf` folders.
-    #####  Search for `service` in this block and replace the value of key `type` with `LoadBalancer`.
-      service:
-        replicas: 1
-        `type: NodePort`
+  - Add the DNS/IP of any node in there respective cloud scripts scripts/aws-eks.sh or gcp.sh or openshift.sh file. 
+     ##### Search for `cluster_name` in the script and Replace value 'tickstackcluster.com' with actual k8S node DNS or IP.
+        cluster_name="`tickstackcluster.com`"
 
-  - Change the type from `NodePort` to `LoadBalancer` in `kube-state-metrics-service.yaml` file inside `kube-state-metrics` folder
-    #####  Search for `type: NodePort` in yaml and replace a value of key `type` with `LoadBalancer`.
-        `type: NodePort`
+  - Add the value of influxUrl in kapacitor/values.yaml. Please don't change port `30082`
+     ##### Search for `influxURL` in the yaml and Replace value 'tickstackcluster.com' with actual k8S node DNS or IP.
+        influxURL: http://`tickstackcluster.com`:30082  
 
+  - Add the value of influxUrl in telegraf-ds/values.yaml. Please don't change port `30082`  
+     ##### Search for `influxdb` in the yaml and Replace value of url 'tickstackcluster.com' with actual k8S node DNS or IP.
+        - influxdb:
+        url: "http://`tickstackcluster.com`:30082"
+
+  - Add the value of prometheus in telegraf-ds/values.yaml. Please don't change port `30080`, `30081`
+     #####  Search for `prometheus` in the yaml and Replace value 'tickstackcluster.com' at 2 places in urls with actual k8S node DNS or IP.
+        - prometheus:
+        urls: ["http://`tickstackcluster.com`:30080/metrics","http://`tickstackcluster.com`:30081/metrics"]
+  
+  - Add the value of influx and kapacitor in telegraf-s/values.yaml. Please don't change port `30082`, `30083`
+     ##### Search `influxdb` in this block replace urls value `api.tickstackcluster.com` with actual k8S node DNS or IP. Do the similar step for `kapacitor`. Please don't change port `30082`, `30083`
+        - influxdb:
+           urls:
+          - "http://`api.tickstackcluster.com`:30082"
+
+        - kapacitor:
+            urls:
+          - "http://`api.tickstackcluster.com`:30083"
+  
 
 #### Usage:
 just run `./create.sh` and let the shell script do it for you! 
 
 - ./create.sh -s $service -a action -c $component
   - Options:
-    -s service:  The name of the component. 
+    -s service:  The name of the service. 
     		    Valid options are `influxdb`, `kapacitor`, `telegraf-s`, `telegraf-ds`, `chronograf` and `all`
     -a action: Valid options are `create` and `destroy`
-    -c component: Valid options are `oss-k8s`, `aws-eks` and `minikube`
+    -c component: Valid options are `oss-k8s`, `aws-eks`, `gcp`, `openshift` and `minikube`
     
 #### Examples:
  - To execute all components from `single command`:

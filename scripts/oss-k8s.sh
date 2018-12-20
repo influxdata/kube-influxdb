@@ -114,7 +114,7 @@ function create_dashboard
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
 
-	cd ../aws-cloudwatch/
+	cd ../oss-k8s/
 
     for file in *
     do

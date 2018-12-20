@@ -124,6 +124,13 @@ function create_dashboard
     do
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
+
+	cd ../minikube/
+
+    for file in *
+    do
+        curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
+    done
 }
 
 
