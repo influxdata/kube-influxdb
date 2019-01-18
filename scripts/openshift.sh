@@ -114,7 +114,7 @@ function create_chart
 function create_dashboard
 {
 	DST=http://$cluster_name:30088/chronograf/v1/dashboards
-	cd ./chronograf/dashboards
+	cd ./chronograf/dashboards/common
     	
     for file in *
     do

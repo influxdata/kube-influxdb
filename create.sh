@@ -47,7 +47,7 @@ function usage
         ./create.sh -s influxdb -a destroy -c oss-k8s
 
         ./create.sh -s all -a create -c oss-k8s
-        ./create.sh -s all -a delete -c oss-k8s
+        ./create.sh -s all -a destroy -c oss-k8s
 EOF
 }
 

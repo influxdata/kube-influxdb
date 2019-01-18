@@ -14,7 +14,7 @@ Run the complete TICK stack using this using create.sh script. By using `create.
 
 ### Deploy the whole stack!
 
-#### Note: This project will currently supported only OSS kubernetes Cluster, AWS EKS, GKS, OpenShift and sminikube 
+#### Note: This project will currently supported only OSS kubernetes Cluster, AWS EKS, GKS, OpenShift and minikube 
 
 ### Prerequisite:
 
@@ -81,6 +81,46 @@ Run the complete TICK stack using this using create.sh script. By using `create.
         - kapacitor:
            urls:
           - "http://`api.tickstackcluster.com`:30083"
+
+#### Openshift Cluster:
+
+- Once you deploy the cluster, open the port 30000-35000 in security group for NodePort
+
+- Need to run following commands to add RBAC permission
+  - oc adm policy add-cluster-role-to-user cluster-admin admin
+  - oc adm policy add-scc-to-user hostaccess -z default
+  - oc annotate namespace tick openshift.io/node-selector=""
+
+- Update the following values:
+ 
+  - Add the name of K8S cluster in scripts/oss-k8s.sh file. 
+     ##### Search for `cluster_name` in the script and Replace value 'tickstackcluster.com' with actual k8S cluster name or dns.
+        cluster_name="`tickstackcluster.com`"
+
+  - Add the value of influxUrl in kapacitor/values.yaml. Please don't change port `30082`
+     ##### Search for `influxURL` in the yaml and Replace value 'api.tickstackcluster.com' with actual cluster Name.
+        influxURL: http://`tickstackcluster.com`:30082  
+
+  - Add the value of influxUrl in telegraf-ds/values.yaml. Please don't change port `30082`  
+     ##### Search for `influxdb` in the yaml and Replace value of url 'tickstackcluster.com' with actual cluster Name.
+        - influxdb:
+        url: "http://`tickstackcluster.com`:30082"
+
+  - Add the value of prometheus in telegraf-ds/values.yaml. Please don't change port `30080`, `30081`
+     #####  Search for `prometheus` in the yaml and Replace value 'tickstackcluster.com' at 2 places in urls with actual cluster Name.
+        - prometheus:
+        urls: ["http://`tickstackcluster.com`:30080/metrics","http://`tickstackcluster.com`:30081/metrics"]
+  
+  - Add the value of influx and kapacitor in telegraf-s/values.yaml. Please don't change port `30082`, `30083`
+     ##### Search `influxdb` in this block replace urls value `api.tickstackcluster.com` with actual cluster Name. Do the similar step for `kapacitor`. Please don't change port `30082`, `30083`
+        - influxdb:
+           urls:
+          - "http://`api.tickstackcluster.com`:30082"
+
+        - kapacitor:
+           urls:
+          - "http://`api.tickstackcluster.com`:30083"
+
 
 #### AWS EKS:
 #### GCP GKS:
