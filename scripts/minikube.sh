@@ -6,13 +6,16 @@ function main
 	service=$1
 	action=$2
 	if [[ $action == 'create' ]]; then
+
+		# create cluster-role-binding
+		kubectl create -f rbac-config.yaml
+		
 		# create kube state metrics
 		kubectl apply -f kube-state-metrics/
 		
 		# Initiaize the helm in the cluster
 		helm init 
 		sleep 20;
-
 		# create charts
 		create_chart $service
 	elif [[ $action == 'destroy' ]]; then
@@ -27,144 +30,109 @@ function create_chart
 {
 	service=$1
 	action=$2
-	influxURL=""
-	kapacitorURL=""
-	telInfluxUrl=""
-	INFLUX_URL=""
-	kAPACITOR_URL=""
-	chronografURL=""
-	prometheusUrl=""
-
-	influxPort=30082
-	kapacitorPort=30083
-	chronografPort=30088
+	influx_url=""
+	tel_influx_url=""
+	promethesus_url=""
+	kapacitor_url=""
+	
+	influx_port=30082
+	kapacitor_port=30083
+	chronograf_port=30088
 
 	minikubeIp=$(minikube ip)
-		
-	echo "Creating chart for" $service
-	if [[ $service == "influxdb" ]]; then
 
+	kubectl config set-context $(kubectl config current-context) --namespace=tick
+	
+	echo "Creating chart for" $service
+	if [ $service == "influxdb" ] || [ $service == "all" ]; then
 		# Deploying influxdb service
 		echo Deploying influxdb .....
-		deploy_service data $service
+		helm install --name data --namespace tick influxdb
 		sleep 30;
 		
 		printf "\n\n=======================================================================\n"
-		echo "Influxdb Endpoint URL:" $(minikube ip):$influxPort
+		echo "Influxdb Endpoint URL:" $(minikube ip):$influx_port
 		printf "\n\n=======================================================================\n"
 		
-	elif [[ $service == "kapacitor" ]]; then
-
+	fi
+	if [ $service == "kapacitor" ] || [ $service == "all" ]; then
 		echo Deploying Kapacitor .....
 	 	sed -i "/influxURL: /c influxURL: http://$minikubeIp:30082" kapacitor/values.yaml
 		
 		# Deploying kapacitor service
-		deploy_service alerts $service
+		helm install --name alerts --namespace tick kapacitor
 		sleep 30;
 		
 		printf "\n\n=======================================================================\n"
-		echo "Kapacitor Endpoint URL:" $(minikube ip):$kapacitorPort
+		echo "Kapacitor Endpoint URL:" $(minikube ip):$kapacitor_port
 		printf "\n\n=======================================================================\n"
+	fi	
 		
-		
-	elif [[ $service == "chronograf" ]]; then
-		
-		deploy_service dash $service
-		echo Deploying Chronograf .....
-		sleep 60;
-		# Deploying chronograf service
-		create_dashboard 
-		printf "\n\n=======================================================================\n"
-		echo "Chronograf Endpoint URL:" $(minikube ip):$chronografPort
-		printf "\n=======================================================================\n"
 
-	elif [[ $service == "telegraf-s" ]]; then
+	if [ $service == "telegraf-s" ] || [ $service == "all" ]; then
+		influx_url=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+        kapacitor_url=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+		sed -i "s/$influx_url/$minikubeIp:30082/g" telegraf-s/values.yaml
+        sed -i "s/$kapacitor_url/$minikubeIp:30083/g" telegraf-s/values.yaml
+		
+		# Deploying telegraf-ds service
+		helm install --name polling --namespace tick telegraf-s
+	fi
 	
-		influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-        kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-		sed -i "s/$influxURL/$minikubeIp:30082/g" telegraf-s/values.yaml
-        sed -i "s/$kapacitor/$minikubeIp:30083/g" telegraf-s/values.yaml
-		
+	if [ $service == "telegraf-ds" ] || [ $service == "all" ]; then	
+		tel_influx_url=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
+		promethesus_url=`cat telegraf-ds/values.yaml  | grep -A2 "prometheus" | grep "urls" | sed -e 's/.*\/\/\(.*\):.*/\1/'`
+		sed -i "s/$tel_influx_url/$minikubeIp:30082/g" telegraf-ds/values.yaml
+		sed -i "s/$promethesus_url/$minikubeIp/g" telegraf-ds/values.yaml
+
 		# Deploying telegraf-ds service
-		deploy_service polling $service
+		helm install --name hosts --namespace tick telegraf-ds
 	
-	elif [[ $service == "telegraf-ds" ]]; then
-		
-		telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-		promethesusUrl=`cat telegraf-ds/values.yaml  | grep -A2 "prometheus" | grep "urls" | sed -e 's/.*\/\/\(.*\):.*/\1/'`
-		sed -i "s/$telInfluxUrl/$minikubeIp:30082/g" telegraf-ds/values.yaml
-		sed -i "s/$promethesusUrl/$minikubeIp/g" telegraf-ds/values.yaml
-
-		# Deploying telegraf-ds service
-		deploy_service hosts $service
-	else
-		deploy_service data influxdb
-		echo Deploying Influxdb .....
-		sleep 30;
-		sed -i "/influxURL: /c influxURL: http://$minikubeIp:30082" kapacitor/values.yaml
-		
-		# Deploying kapacitor service
-	 	echo Deploying Kapacitor .....
-        deploy_service alerts kapacitor
-
-        influxURL=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-		kapacitor=`cat telegraf-s/values.yaml | grep -A3 -m 1 "\- kapacitor:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`	
-		sed -i "s/$influxURL/$minikubeIp:30082/g" telegraf-s/values.yaml
-        sed -i "s/$kapacitor/$minikubeIp:30083/g" telegraf-s/values.yaml
-        sleep 30;
-
-        # Deploying telegaf-s service
-	 	echo Deploying telegraf-s .....
-	 	deploy_service polling telegraf-s
-		telInfluxUrl=`cat telegraf-ds/values.yaml | grep -A3 -m 1 "\- influxdb:" | grep "http" | sed -e 's/.*\/\/\(.*\)".*/\1/'`
-		promethesusUrl=`cat telegraf-ds/values.yaml  | grep -A2 "prometheus" | grep "urls" | sed -e 's/.*\/\/\(.*\):.*/\1/'`
-		sed -i "s/$telInfluxUrl/$minikubeIp:30082/g" telegraf-ds/values.yaml
-		sed -i "s/$promethesusUrl/$minikubeIp/g" telegraf-ds/values.yaml
-
-		# Deploying telegraf-ds service
-		deploy_service hosts telegraf-ds
-
+	fi
+	
+	if [ $service == "chronograf" ] || [ $service == "all" ]; then		
 		# Deploying chronograf service
 		echo Deploying Chronograf .....
-		deploy_service dash chronograf
-
+		helm install --name dash --namespace tick chronograf
 		sleep 60;
 
 		# Call dashboard function
-		create_dashboard 
+		create_dashboard
+		printf "\n\n=======================================================================\n"
+		echo "Chronograf Endpoint URL:" $(minikube ip):$chronograf_port
+		printf "\n\n=======================================================================\n"
+	fi
 
-		kubectl config set-context $(kubectl config current-context) --namespace=tick
-	
+	if [ $service == "all" ]; then
 		printf "\n\n=======================================================================\n"
 
-		echo "Influxdb Endpoint URL:" $(minikube ip):$influxPort
-		echo "Chronograf Endpoint URL:" $(minikube ip):$chronografPort
-		echo "Kapacitor Endpoint URL:" $(minikube ip):$kapacitorPort
+		echo "Influxdb Endpoint URL:" $(minikube ip):$influx_port
+		echo "Chronograf Endpoint URL:" $(minikube ip):$chronograf_port
+		echo "Kapacitor Endpoint URL:" $(minikube ip):$kapacitor_port
+
 		printf "\n=======================================================================\n"
-	fi
+	fi		
 }
 
 function create_dashboard
 {
-	echo "Inside Dashobard"
-	
 	dashboard=$(minikube ip)
 	DST=http://$dashboard:30088/chronograf/v1/dashboards
-	cd ./chronograf/dashboards
+	cd ./chronograf/dashboards/common
     	
     for file in *
     do
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
+
+	cd ../minikube/
+
+    for file in *
+    do
+        curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
+    done
 }
 
-
-function deploy_service
-{
-	service_alias=$1
-	service=$2
-	helm install --name $service_alias --namespace tick $service
-}
 
 function destroy_chart
 {

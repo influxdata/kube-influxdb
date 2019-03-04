@@ -6,6 +6,7 @@ function main
 	service=$1
 	action=$2
 	if [[ $action == 'create' ]]; then
+
 		# create cluster-role-binding
 		kubectl create -f rbac-config.yaml
 		kubectl create serviceaccount --namespace kube-system tiller
@@ -13,9 +14,11 @@ function main
 		
 		# create kube state metrics
 		kubectl apply -f kube-state-metrics/
+		
 		# Initiaize the helm in the cluster
 		helm init 
 		sleep 20;
+
 		# create tiller deploy patched
 		kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
 		kubectl create serviceaccount --namespace kube-system tiller
@@ -118,7 +121,7 @@ function create_dashboard
 	   	curl -X POST -H "Accept: application/json" -d @$(basename "$file") $DST;
 	done
 
-	cd ../eks/
+	cd ../openshift/
 
     for file in *
     do
@@ -148,6 +151,6 @@ function destroy_chart
 
 function initScript
 {
-	echo "Tick Charts for EKS"	
+	echo "Tick Charts for openshift"	
 }
 main "$@"
