@@ -12,120 +12,141 @@ Configuration to monitor Kubernetes with the TICK stack
 
 Run the complete TICK stack using this using create.sh script. By using `create.sh` all four official TICK stack images are deployed in kubernetes.
 
-### Deploy the whole stack!
+## Deploy the whole stack
 
-#### Note: This project will currently supported only OSS kubernetes Cluster, AWS EKS and minikube 
+_Note: This project will currently supported only OSS kubernetes Cluster, AWS EKS and minikube._
 
-### Prerequisite:
+### Prerequisites
 
-- Have your `kubectl` tool configured for the Kubernetes cluster Running AWS on where you would like to deploy TICK stack.
-- Have `helm` and `tiller` installed and configured
-  - Download and configure the `helm` cli
-    * [link](https://github.com/kubernetes/helm/blob/master/docs/install.md)
-  - Run `helm init` to install `tiller` in your cluster
-    * [link](https://github.com/kubernetes/helm/blob/master/docs/install.md#installing-tiller)
+Set your `kubectl` context to point to an active EKS cluster where you would like to deploy TICK stack.
 
-- In following section you will require the k8S cluster url, Please use following kubeclt command to get k8S cluster url. 
-   `kubectl cluster-info`
-   
-    ###### Output of the  `kubectl cluster-info` command:
-   
+[Install `helm`](https://github.com/kubernetes/helm/blob/master/docs/install.md) on your local development machine.
+
+Run `helm init` to [install `tiller`](https://github.com/kubernetes/helm/blob/master/docs/install.md#installing-tiller) in your EKS cluster.
+
+Grab the Kubernetes API URL for your EKS cluster using the following `kubeclt` command.
+
+```sh
+> kubectl cluster-info
+Kubernetes master is running at https://api.tickstackcluster.k8slab.xyz
+CoreDNS is running at https://api.tickstackcluster.k8slab.xyz/api/v1/namespaces/kube-system/services/kube-dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+```
+
+Record the master URL to use in following sections, i.e. `api.tickstackcluster.k8slab.xyz` in the example above to use in the following sections.
+
+#### OSS Kubernetes Cluster
+
+_Note: This guide assumes an open source cluster has been deployed on AWS, e.g. using [kops](https://github.com/kubernetes/kops) or another tool._
+
+With an active cluster, open ports `30000` to `35000` in the security group for `NodePort`.
+
+Have a `daemon-set` configuration on the `master node` of the cluster for `telegraf-ds`
+Execute following command on master node.
+
+```sh
+# Note: You need to ssh to master node to execute above command. Replace `ip-x-x-x-x` from `<ip-x-x-x-x.ec2.internal>` with cluster's master node private ip.
+kubectl taint nodes <ip-x-x-x-x.ec2.internal> node-role.kubernetes.io/master:NoSchedule-
+```
+
+This repository contains a few helper scripts to bootstrap monitoring in a cluster (`create.sh` and everything in the `/scripts` directory). Some values in these scripts need to be updated:
+
+- In `scripts/aws.sh`, set `ClusterName` to the Kubernetes master URL of your cluster.
+
+    ```sh
+    # Search for `ClusterName` in the script and replace the value 'api.tickstackcluster.com' with actual k8S cluster name or dns.
+    ClusterName="`api.tickstackcluster.com`"
     ```
-    Kubernetes master is running at https://api.tickstackcluster.k8slab.xyz
-    
-    KubeDNS is running at https://api.tickstackcluster.k8slab.xyz/api/v1/namespaces/kube-system/services/kube-dns/proxy
-    
-    To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+
+- In `kapacitor/values.yaml`, set the value of `influxUrl` to your cluster's master URL. Leave the port set to `30082`.
+
+    ```sh
+    # Search for `influxURL` in the yaml and replace the value 'api.tickstackcluster.com' with actual cluster Name.
+    influxURL: http://`api.tickstackcluster.com`:30082
     ```
-    
-    ###### Note - From above output master url is cluster name which you need to use in following sections. Don't use above 			output, it is only example to show the command output.
 
-#### OSS kubernetes Cluster:
+- In `telegraf-ds/values.yaml`, set the value of `influxUrl` to your cluster's master URL. Leave the port set to `30082`.
 
-- Once you deploy the cluster, open the port 30000-35000 in security group for NodePort
+    ```sh  
+    # Search for `influxdb` in the yaml and Replace value of url 'api.tickstackcluster.com' with actual cluster Name.
+    - influxdb:
+      url: "http://`api.tickstackcluster.com`:30082"
+    ```
 
-- Have a `daemon-set` configuration on the `master node` of the cluster for `telegraf-ds`
-  - Execute following command on master node. 
-  
-       `kubectl taint nodes <ip-x-x-x-x.ec2.internal> node-role.kubernetes.io/master:NoSchedule-`
-       
-    ###### Note: You need to ssh to master node to execute above command. Replace `ip-x-x-x-x` from `<ip-x-x-x-x.ec2.internal>` with cluster's master node private ip.  
+- In `telegraf-ds/values.yaml`, set the value of `prometheus` to your cluster's master URL. Leave the ports set to `30080` and `30081`.
 
+    ```sh
+    # Search for `prometheus` in the yaml and Replace value 'api.tickstackcluster.com' at 2 places in urls with actual cluster Name.
+    - prometheus:
+      urls: ["http://`api.tickstackcluster.com`:30080/metrics","http://`api.tickstackcluster.com`:30081/metrics"]
+    ```
 
-- Update the following values:
+- In `telegraf-s/values.yaml`, set the value of `influxdb` and `kapacitor` for your cluster's master URL. Leave the ports set to `30082` and `30083`.
 
-  - Add the name of K8S cluster in scripts/aws.sh file. 
-     ##### Search for `ClusterName` in the script and Replace value 'api.tickstackcluster.com' with actual k8S cluster name or dns.
-        ClusterName="`api.tickstackcluster.com`"
+    ```sh
+    - influxdb:
+      urls:
+        - "http://`api.tickstackcluster.com`:30082"
+    - kapacitor:
+      urls:
+        - "http://`api.tickstackcluster.com`:30083"
+    ```
 
-  - Add the value of influxUrl in kapacitor/values.yaml. Please don't change port `30082`
-     ##### Search for `influxURL` in the yaml and Replace value 'api.tickstackcluster.com' with actual cluster Name.
-        influxURL: http://`api.tickstackcluster.com`:30082  
+#### AWS EKS
 
-  - Add the value of influxUrl in telegraf-ds/values.yaml. Please don't change port `30082`  
-     ##### Search for `influxdb` in the yaml and Replace value of url 'api.tickstackcluster.com' with actual cluster Name.
-        - influxdb:
-        url: "http://`api.tickstackcluster.com`:30082"
+Deploying `kube-influxdb` on on AWS EKS requires a few changes to the `values.yaml` file. In particular, EKS requires load balancers to expose services.
 
-  - Add the value of prometheus in telegraf-ds/values.yaml. Please don't change port `30080`, `30081`
-     #####  Search for `prometheus` in the yaml and Replace value 'api.tickstackcluster.com' at 2 places in urls with actual cluster Name.
-        - prometheus:
-        urls: ["http://`api.tickstackcluster.com`:30080/metrics","http://`api.tickstackcluster.com`:30081/metrics"]
-  
-  - Add the value of influx and kapacitor in telegraf-s/values.yaml. Please don't change port `30082`, `30083`
-     ##### Search `influxdb` in this block replace urls value `api.tickstackcluster.com` with actual cluster Name. Do the similar step for `kapacitor`. Please don't change port `30082`, `30083`
-        - influxdb:
-           urls:
-          - "http://`api.tickstackcluster.com`:30082"
+- In the `values.yaml` files of the `influxdb`, `kapacito`, `telegraf-s` and `chronograf` folders, change the service type from `NodePort` to `LoadBalancer`.
 
-        - kapacitor:
-            urls:
-             - "http://`api.tickstackcluster.com`:30083"
+    ```sh
+    # Search for "service" in this block and replace the value of key "type" with "LoadBalancer".
+    service:
+      replicas: 1
+        type: NodePort
+    ```
 
-#### AWS EKS:
+- In the `kube-state-metrics-service.yaml` file inside the `kube-state-metrics` folder, change the type from `NodePort` to `LoadBalancer`.
 
-To work with AWS EKS service, this solution needed few changes in a file `values.yaml`. EKS required Loadbalancers to expose the services for this reason we need to changes service type to `LoadBalancer`. 
+    ```sh
+    # Search for "type: NodePort" in yaml and replace the value with "LoadBalancer".
+    type: NodePort
+    ```
 
-and NodePort In EKS tick stack deployment, service type is LoadBalancer, so it will create external LoadBalancer
+_Note: Changing the `NodePort` to `LoadBalancer` in EKS will create a load balancer._
 
-  - Change service type from `NodePort` to `LoadBalancer` in values.yaml of `influxdb`, `kapacito`, `telegraf-s` and `chronograf` folders.
-    #####  Search for `service` in this block and replace the value of key `type` with `LoadBalancer`.
-      service:
-        replicas: 1
-        `type: NodePort`
+### Usage
 
-  - Change the type from `NodePort` to `LoadBalancer` in `kube-state-metrics-service.yaml` file inside `kube-state-metrics` folder
-    #####  Search for `type: NodePort` in yaml and replace a value of key `type` with `LoadBalancer`.
-        `type: NodePort`
+After completing the steps above, run the `create.sh` script in the root of the repo.
 
-
-#### Usage:
-just run `./create.sh` and let the shell script do it for you! 
-
-- ./create.sh -s $service -a action -c $component
+```sh
+./create.sh -s $service -a action -c $component
   - Options:
     -s service:  The name of the component. 
-    		    Valid options are `influxdb`, `kapacitor`, `telegraf-s`, `telegraf-ds`, `chronograf` and `all`
+             Valid options are `influxdb`, `kapacitor`, `telegraf-s`, `telegraf-ds`, `chronograf` and `all`
     -a action: Valid options are `create` and `destroy`
     -c component: Valid options are `oss-k8s`, `aws-eks` and `minikube`
-    
-#### Examples:
- - To execute all components from `single command`:
+```
 
-    	./create.sh -s all -a create -c oss-k8s
-    	./create.sh -s all -a destroy -c oss-k8s
-        
- - To execute `individual command`:
+#### Examples
 
-      ./create.sh -s influxdb -a create -c oss-k8s
-      ./create.sh -s influxdb -a destroy -c oss-k8s
-	
+To deploy all components with a single command:
 
-### Manual Steps after complete stack deployement
-- There are two Endpoint printed on console at the end of create script 
-  - `Chronograf Endpoint URL`.
-  - `Influxdb Endpoint URL`.
+```sh
+./create.sh -s all -a create -c oss-k8s
+./create.sh -s all -a destroy -c oss-k8s
+```
 
-- Use `Chronograf Endpoint URL` to access `Chronograf dashboard`. 
-- Use `Influxdb Endpint URL` to add new influxdb connection.
- - Replace connection string with `Influxdb Endpoint URL`.
+To deploy a single TICK component:
+
+```sh
+./create.sh -s influxdb -a create -c oss-k8s
+./create.sh -s influxdb -a destroy -c oss-k8s
+```
+
+### Post-deployment
+
+Once complete, the script will print endpoints for Chronograf and InfluxDB.
+Use the Chronograf endpoint URL to access the Chronograf dashboard.
+Use the Influxdb endpint URL to add a new InfluxDB connection.
+Replace the connection string with the InfluxDB endpoint URL.
