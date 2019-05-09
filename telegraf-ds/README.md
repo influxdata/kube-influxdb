@@ -61,14 +61,15 @@ $ helm install --name my-release -f values.yaml stable/telegraf-ds
 This chart deploys the following by default:
 
 - `telegraf` (`telegraf-ds`) running in a daemonset with the following plugins enabled
-  * [`cpu`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`disk`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+  * [`cpu`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cpu)
+  * [`disk`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disk)
   * [`docker`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/docker)
-  * [`diskio`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`kernel`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+  * [`diskio`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/diskio)
+  * [`kernel`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kernel)
   * [`kubernetes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kubernetes)
-  * [`mem`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`processes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`swap`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+  * [`mem`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mem)
+  * [`processes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/processes)
+  * [`prometheus`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/prometheus)
+  * [`swap`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/swap)
   * [`system`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
   
