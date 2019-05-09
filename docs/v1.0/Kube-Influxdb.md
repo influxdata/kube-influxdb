@@ -21,7 +21,7 @@ GitHub Repo: https://github.com/influxdata/tick-charts
 
 TICK Stack:
 <p align="left">
-  <img src="https://github.com/kube-influxdb/blob/multiple_oss/docs/images/tickstack.png"/>
+  <img src="https://github.com/influxdata/kube-influxdb/raw/master/docs/v1.0/images/tickstack.png"/>
 </p>
 
 From the physical/infrastructure point of view, a Kubernetes cluster is made up of a set of nodes overseen by a master. The master’s tasks include orchestrating containers across nodes, keeping track of state and exposing cluster control through a REST API and a UI.
@@ -29,7 +29,7 @@ From the physical/infrastructure point of view, a Kubernetes cluster is made up 
 On the other hand, from the logical/application point of view, Kubernetes clusters are arranged in the hierarchical fashion shown in this picture:
 
 <p align="left">
-  <img src="https://github.com/kube-influxdb/blob/multiple_oss/docs/images/kubernetes_tickstackpod.png"/>
+  <img src="https://github.com/influxdata/kube-influxdb/raw/master/docs/v1.0/images/kubernetes_tickstackpod.png"/>
 </p>
 
 All containers run inside pods. A pod is a set of containers that live together. They are always co-located and co-scheduled, and run in a shared context with shared storage. The containers in the pod are guaranteed to be co-located on the same machine and can share resources.
@@ -42,13 +42,13 @@ All containers run inside pods. A pod is a set of containers that live together.
 Typical Kubernetes master and node representation. Telegraf-ds is running as daemon set on each node. Inlfuxdb and Chronograf is running on master in separate namespace.
 
 <p align="left">
-  <img src="https://github.com/kube-influxdb/blob/multiple_oss/docs/images/tickstack-pod.png"/>
+  <img src="https://github.com/influxdata/kube-influxdb/raw/master/docs/v1.0/images/tickstack-pod.png"/>
 </p>
 
 ## Components diagram of `kube-influxdb`
 
 <p align="left">
-  <img src="https://github.com/kube-influxdb/blob/multiple_oss/docs/images/ube-influxdb.png"/>
+  <img src="https://github.com/influxdata/kube-influxdb/raw/master/docs/v1.0/images/kube-influxdb.png"/>
 </p>
 
 ### K8S Monitoring Dashboards
