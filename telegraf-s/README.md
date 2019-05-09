@@ -78,21 +78,33 @@ inputs:
 This chart deploys the following by default:
 
 - `telegraf` (`telegraf-ds`) running in a daemonset with the following plugins enabled
-  * [`cpu`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`disk`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+  * [`cpu`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cpu)
+  * [`disk`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disk)
   * [`docker`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/docker)
-  * [`diskio`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`kernel`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+  * [`diskio`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/diskio)
+  * [`kernel`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kernel)
   * [`kubernetes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kubernetes)
-  * [`mem`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`processes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
-  * [`swap`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+  * [`mem`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mem)
+  * [`processes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/processes)
+  * [`prometheus`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/prometheus)
+  * [`swap`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/swap)
   * [`system`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
 
 - A single `telegraf` deployment (`telegraf-s`) with an associated service running the following plugins:
-  * [`prometheus`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/prometheus)
+  * [`cpu`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cpu)
+  * [`cloudwatch`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/cloudwatch)
+  * [`disk`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/disk)
+  * [`diskio`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/diskio)
   * [`influxdb`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/influxdb)
+  * [`kapacitor`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kapacitor)
+  * [`kube_inventory`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kube_inventory)
+  * [`mem`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mem)
+  * [`net`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/net)
+  * [`processes`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/processes)
   * [`statsd`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/statsd)
+  * [`swap`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/swap)
+  * [`system`](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/system)
+
 
   
 ### Supported Outputs
